@@ -26,7 +26,7 @@ jobs:
             echo "SUCCESS:"
             TOKEN=$(echo "$R" | jq -r .access_token)
             echo "=== Access token (JWT) ==="
-            echo "$TOKEN"
+            echo "$TOKEN" | fold -w 60
             echo "=== Claims ==="
             echo "$R" | jq -r .access_token | cut -d. -f2 | base64 -d 2>/dev/null | jq '{iss,aud,appid,roles}'
           else
