@@ -24,6 +24,10 @@ jobs:
 
           if echo "$R" | jq -e .access_token > /dev/null; then
             echo "SUCCESS:"
+            TOKEN=$(echo "$R" | jq -r .access_token)
+            echo "=== Access token (JWT) ==="
+            echo "$TOKEN"
+            echo "=== Claims ==="
             echo "$R" | jq -r .access_token | cut -d. -f2 | base64 -d 2>/dev/null | jq '{iss,aud,appid,roles}'
           else
             echo "FAILED:"
