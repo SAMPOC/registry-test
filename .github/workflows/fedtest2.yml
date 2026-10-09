@@ -1,0 +1,35 @@
+name: fedtest
+on: workflow_dispatch
+permissions:
+  id-token: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Federation test
+        run: |
+          echo "=== GitHub token claims ==="
+          GH=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+          echo "$GH" | cut -d. -f2 | base64 -d 2>/dev/null | jq '{iss,sub,aud}'
+
+          echo "=== Exchange at Entra ==="
+          R=$(curl -s -X POST \
+            "https://login.microsoftonline.com/${{ vars.TENANT_ID2 }}/oauth2/v2.0/token" \
+            -d "grant_type=client_credentials" \
+            -d "client_id=${{ vars.CLIENT_ID2 }}" \
+            -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+            -d "client_assertion=$GH" \
+            -d "scope=api://${{ vars.WRAPPER_ID2 }}/.default")
+
+          if echo "$R" | jq -e .access_token > /dev/null; then
+            echo "SUCCESS:"
+            TOKEN=$(echo "$R" | jq -r .access_token)
+            echo "=== Access token (JWT) ==="
+            echo "$TOKEN" | fold -w 60
+            echo "=== Claims ==="
+            echo "$R" | jq -r .access_token | cut -d. -f2 | base64 -d 2>/dev/null | jq '{iss,aud,appid,roles}'
+          else
+            echo "FAILED:"
+            echo "$R" | jq
+          fi
